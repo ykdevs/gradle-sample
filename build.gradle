@@ -1,0 +1,308 @@
+plugins {
+    id 'java'
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+// タスクの実態
+def task01 = task task01 {
+    doFirst {
+        println(task01)
+        println(task01.class)
+    }
+}
+// Action
+def task02 = task task02
+
+task02.doFirst {
+    println "two"
+}
+task02.doFirst {
+    println "one"
+}
+task02.doLast {
+    println "three"
+}
+task02.doLast {
+    println "four"
+}
+
+// 設定ブロックで定義する
+task task03 {
+    doFirst {
+        println(delegate)
+        println(delegate.class)
+        println("FOO!!")
+    }
+}
+
+task task04{
+    task04.doFirst {
+        println "hello1"
+        println "hello2"
+    }
+    task04.doLast {
+        println "hello3"
+        println "hello4"
+    }
+}
+
+println("設定フェーズ１" + getState() + " : " + getStatus() + " : " + getName())
+
+task task05 {
+    println("設定フェーズ２" + getState() + " : " + getStatus() + " : " + getName())
+    doFirst {
+        println project.getState().getExecuted()
+        println("実行フェーズ１" + getState() + " : " + getStatus())
+    }
+
+    println("設定フェーズ３")
+    doLast {
+        println("実行フェーズ２")
+    }
+}
+
+task task06 {
+    println("設定フェーズ４")
+}
+
+println("設定フェーズ５")
+
+task task07 {
+    doFirst {
+        println task07
+        println project.task07
+        println tasks.task07
+        println tasks.getByName("task07")
+        println tasks["task07"] // getAt() メソッドのシンタックスシュガー
+        println "Name = " + getName()
+    }
+}
+
+task task08 {
+    doFirst {
+        println "Name = " + getName()
+    }
+}
+
+task task09 {
+    doFirst {
+        println "Name = " + getName()
+    }
+}
+
+task task10 {
+    dependsOn task08
+    dependsOn task09
+    doFirst {
+        println("task10")
+    }
+}
+task09.dependsOn task08
+
+
+task task11 {
+    doFirst { println "task11" }
+    finalizedBy "finalizer"
+}
+
+task task12 {
+    doFirst {
+        println "task12"
+        throw new Exception("task12ex")
+    }
+    finalizedBy "finalizer"
+}
+
+task finalizer {
+    doFirst { println "finalizer" }
+}
+
+// 実行する条件を指定
+// ./gradlew task13
+// ./gradlew task13 -Phoge
+task task13 {
+    doFirst { println "task13" }
+    onlyIf { project.hasProperty("hoge") }
+    dependsOn task08
+    finalizedBy "finalizer"
+}
+
+// ファイルの選択
+import java.nio.file.Path
+
+task task14 {
+    doFirst {
+        File file1 = file("foo.txt")
+        println(file1)
+
+        File file2 = file(new File("foo.txt"))
+        println(file2)
+
+        File file3 = file(Path.of("foo.txt"))
+        println(file3)
+    }
+}
+
+task task15 {
+    doFirst {
+        FileCollection files = files("foo.txt", "bar.txt")
+        files.each { println it }
+    }
+    doLast {
+        FileCollection files = files("foo.txt", "bar.txt")
+        println "asPath = ${files.asPath}"
+    }
+    doLast {
+        FileCollection files = files("foo.txt", "bar.txt", "fizz.txt", "buzz.txt")
+        FileCollection filtered = files.filter { it.name.startsWith("b") }
+        filtered.each { println it }
+    }
+    doLast {
+        FileTree tree = fileTree("src")
+        tree.each { println it }
+    }
+    doLast {
+        FileTree tree = fileTree("build") {
+            include "**/*.class"
+        }
+        tree.each { println it }
+    }
+    doLast {
+        FileTree tree = fileTree(dir: "src", include: "**/*.java")
+        tree.each { println it }
+    }
+}
+
+// 入出力の定義
+task task16 {
+    def outputFile = file("foo.txt")
+
+    if (project.hasProperty("hoge")) {
+        println "def task16"
+        inputs.property "hoge", project.hoge
+        outputs.file outputFile
+
+        doFirst {
+            println "foo"
+            outputFile.text = hoge
+        }
+    }
+}
+
+// Inputs/Outputsをタスクが呼ばれたときだけ実行
+// ./gradlew task26 -Phoge=HOGE
+tasks.addRule("Pattern: task26") { taskName ->
+    if (taskName.startsWith("task26")) {
+        task(taskName) {
+            def outputFile = file("foo.txt")
+
+            inputs.property "hoge", project.hoge
+            outputs.file outputFile
+
+            doFirst {
+                println "foo"
+                outputFile.text = hoge
+            }
+        }
+    }
+}
+
+// タスクルール
+// ./gradlew echoHOGE
+tasks.addRule("Pattern: echo<MESSAGE>") { taskName ->
+    if (taskName.startsWith("echo")) {
+        task(taskName) {
+            doFirst { println(taskName - "echo") }
+        }
+    }
+}
+
+// タスクルールと依存漢検
+task task17(dependsOn: echoHoge) {
+    doFirst { println "task17" }
+}
+
+
+// clean
+// ./gradlew task18
+// ls -l foo.txt
+// ./gradlew cleanTask18
+// ls -l foo.txt
+task task18 {
+    def outputFile = file("foo.txt")
+    outputs.file outputFile
+
+    doFirst {
+        outputFile.text = "task18!!"
+    }
+}
+
+
+
+class CustomTask extends DefaultTask {
+    @TaskAction
+    def task19() {
+        println("Task19!!")
+    }
+}
+
+task task19(type: CustomTask)
+
+task task20(type: Copy) {
+    //include "*.txt", "**/*.xml"
+    //exclude "**/*.class", "**/*.bk"
+    from "src"
+    into "src2"
+    //rename(/(.*)\.([a-z]+)/, '$1_copy.$2')
+}
+
+task task21 {
+    doFirst {
+        copy {
+            from "src"
+            into "src2"
+            include "**/*.java"
+        }
+    }
+}
+
+task task22(type: Delete) {
+    delete "targetDir/aaa.txt", "targetDir/hoge"
+}
+
+task task23(type: Sync) {
+    from "src"
+    into "src2"
+    include "**/*.java"
+}
+
+task task24(type: Exec) {
+    workingDir "/tmp"
+    environment MESSAGE: "Hello World!!"
+    commandLine "bash", "-c", "echo MESSAGE"
+}
+
+
+task task25(type: Zip) {
+    archivesBaseName = "task25"
+    from "build"
+    destinationDirectory = file("libs")
+    include "**/*.jar"
+}
+
+apply plugin: sample.Plugin01
