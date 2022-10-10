@@ -189,6 +189,8 @@ task task15 {
 }
 
 // 入出力の定義
+// Inputs/Outpusは設定フェーズで動作するが、hasPropertyで条件を指定すると
+// 設定時にコンパイルエラーにならない。
 task task16 {
     def outputFile = file("foo.txt")
 
@@ -204,7 +206,8 @@ task task16 {
     }
 }
 
-// Inputs/Outputsをタスクが呼ばれたときだけ実行
+// addRuleはパターンにあったタスクを指定された時だけ動くので
+// Inputs/Outputsの設定フェーズもタスクが呼ばれたときだけ実行される
 // ./gradlew task26 -Phoge=HOGE
 tasks.addRule("Pattern: task26") { taskName ->
     if (taskName.startsWith("task26")) {
@@ -282,7 +285,7 @@ task task21 {
 }
 
 task task22(type: Delete) {
-    delete "targetDir/aaa.txt", "targetDir/hoge"
+    delete "src2", "libs"
 }
 
 task task23(type: Sync) {
@@ -297,12 +300,11 @@ task task24(type: Exec) {
     commandLine "bash", "-c", "echo MESSAGE"
 }
 
-
 task task25(type: Zip) {
     archivesBaseName = "task25"
-    from "build"
+    from "src"
     destinationDirectory = file("libs")
-    include "**/*.jar"
+    include "**/*.java"
 }
 
 apply plugin: sample.Plugin01
